@@ -1,5 +1,7 @@
 import os
 import glob
+import joblib
+from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import pandas as pd
 import scipy.io
@@ -62,10 +64,13 @@ def cwru_main():
         df = pd.DataFrame(all_rows)
         feature_headers = [
             "RMS", "Kurtosis", "Peak_Amplitude", "Standard_Deviation", "Dominant_Frequency", "Peak_FFT_Amplitude", "BPFO_Amplitude", 
-            "BPFI_Amplitude", "BSF_Amplitude", "BPFO_Ratio", "BPFI_Ratio", "BSF_Ratio", "Fault_Class", "Horsepower"
+            "BPFI_Amplitude", "BPFO_Ratio", "BPFI_Ratio", "Fault_Class", "Horsepower"
         ]
 
         df.to_csv(output_path, index=False, header=feature_headers)
+    scaler = MinMaxScaler()
+    df[feature_cols] = scaler.fit_transform(df[feature_cols])
+    joblib.dump(scaler, "data/processed/cwru_scaler.pkl")
     normalize_dataset(prefix='cwru')
 
 if __name__ == "__main__":

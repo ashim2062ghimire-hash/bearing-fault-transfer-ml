@@ -5,6 +5,8 @@ import random
 import pandas as pd
 import scipy.signal
 import scipy.stats
+from sklearn.preprocessing import MinMaxScaler
+import joblib
 
 def set_reproducibility(seed=9):
     random.seed(seed)
@@ -22,8 +24,7 @@ def bearing_fault_frequencies(rpm):
 
     bpfo = (n / 2) * fr * (1 - ratio)
     bpfi = (n / 2) * fr * (1 + ratio)
-    bsf = (D / (2 * d)) * fr * (1 - ratio ** 2)
-    return bpfo, bpfi, bsf
+    return bpfo, bpfi
 
 def segment_signal(signal, seg_len, overlap):
     step = int(seg_len * (1 - overlap))
@@ -46,21 +47,28 @@ def label_dataset(file_path, mapping_path='data/mapping/fault_group_mapping.json
 def normalize_dataset(prefix):
     input_csv = f'data/processed/{prefix}_features_comp.csv'
     output_csv = f'data/processed/{prefix}_features_norm.csv'
-    
+    scaler_path = "data/processed/cwru_scaler.pkl"
+ 
     if not os.path.exists(input_csv):
         raise FileNotFoundError(f"The file '{input_csv}' does not exist!")
         
     df = pd.read_csv(input_csv)
     
     feature_cols = df.select_dtypes(include=[np.number]).columns[:-2]
-    
-    df[feature_cols] = (df[feature_cols] - df[feature_cols].min()) / (df[feature_cols].max()-df[feature_cols].min())
-    
+    if prefix=="cwru":
+        scaler = MinMaxScaler()
+        df[feature_cols] = scaler.fit_transform(df[feature_cols])
+        joblib.dump(scaler, scaler_path)
+    else:
+        if not os.path.exists(scaler_path):
+            raise FileNotFoundError(f"Scaler file '{scaler_path}' not found! Process 'cwru' first.")
+        scaler = joblib.load(scaler_path)
+        df[feature_cols] = scaler.transform(df[feature_cols])
     df.to_csv(output_csv, index=False, header=False)
     print(f" -> Successfully saved normalized {prefix} dataset.")
 
 def feature_calc(rpm, final_signal, prefix, final_fs):
-    bpfo, bpfi, bsf = bearing_fault_frequencies(rpm)
+    bpfo, bpfi = bearing_fault_frequencies(rpm)
     segment = segment_signal(signal = final_signal, seg_len = 2000, overlap = 0.5)
     features = []
     print(f"{len(segment)} segments for {prefix}")
@@ -90,11 +98,9 @@ def feature_calc(rpm, final_signal, prefix, final_fs):
             return sum
         bpfo_amp = sum_amp_near(bpfo)
         bpfi_amp = sum_amp_near(bpfi)
-        bsf_amp = sum_amp_near(bsf)
-        amp_sum = bpfi_amp + bpfo_amp + bsf_amp 
+        amp_sum = bpfi_amp + bpfo_amp
         bpfo_ratio = bpfo_amp / amp_sum
         bpfi_ratio = bpfi_amp / amp_sum
-        bsf_ratio = bsf_amp / amp_sum
         features.append([ rms, kurt, peak_amp, std_dev, dominant_freq, peak_fft_amp,
-            bpfo_amp, bpfi_amp, bsf_amp, bpfo_ratio, bpfi_ratio, bsf_ratio ])
+            bpfo_amp, bpfi_amp, bpfo_ratio, bpfi_ratio])
     return features

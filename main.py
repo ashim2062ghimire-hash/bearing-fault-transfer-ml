@@ -1,4 +1,4 @@
-from src.features_extract.step03_cwru_extraction import cwru_main
+from features_extract.step02_cwru_extraction import cwru_main
 from src.ml.step04_preprocessing import preprocess_pipeline
 from src.ml.step05_training_and_evaluation import train_and_evaluate_simulation
 from src.ml.step06_evaluate_ansys import evaluate_ansys_pipeline
