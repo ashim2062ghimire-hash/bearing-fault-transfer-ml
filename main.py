@@ -1,7 +1,7 @@
 from features_extract.step02_cwru_extraction import cwru_main
 from src.ml.step04_preprocessing import preprocess_pipeline
 from src.ml.step05_training_and_evaluation import train_and_evaluate_simulation
-from src.ml.step06_evaluate_ansys import evaluate_ansys_pipeline
+from ml.step06_evaluate import evaluate_ansys_pipeline
 from src.ml.step07_domain_comparision import run_domain_comparison
 
 def main():
@@ -10,11 +10,11 @@ def main():
      print("|| CWRU FILE EXTRACTION COMPLETED SUCCESSFULLY ||")
 
      print("|| STARTING ML PIPELINE ||")
+     
      preprocess_pipeline(
-          cwru_csv="data/processed/cwru_features_norm.csv",
-          ansys_csv="data/processed/ansys_features_norm.csv",
           output_dir="data/splits"
      )
+
      train_and_evaluate_simulation(
           output_dir="output", 
           model_dir="model"

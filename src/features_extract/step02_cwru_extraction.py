@@ -56,7 +56,7 @@ def cwru_main():
     all_rows = []
     for file_path in input_dir:
         features = preprocess_and_calc(file_path)
-        labels = label_dataset(file_path)
+        labels = label_dataset(file_path, prefix='cwru')
         for feature_row in features:
             row = np.hstack((feature_row, labels))
             all_rows.append(row)
@@ -68,9 +68,6 @@ def cwru_main():
         ]
 
         df.to_csv(output_path, index=False, header=feature_headers)
-    scaler = MinMaxScaler()
-    df[feature_cols] = scaler.fit_transform(df[feature_cols])
-    joblib.dump(scaler, "data/processed/cwru_scaler.pkl")
     normalize_dataset(prefix='cwru')
 
 if __name__ == "__main__":

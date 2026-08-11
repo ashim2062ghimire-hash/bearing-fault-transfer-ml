@@ -34,7 +34,11 @@ def segment_signal(signal, seg_len, overlap):
     ]
     return np.array(segments)
 
-def label_dataset(file_path, mapping_path='data/mapping/fault_group_mapping.json'):
+def label_dataset(file_path, prefix):
+    if prefix=='cwru':
+        mapping_path='data/mapping/fault_group_mapping_cwru.json'
+    else:
+        mapping_path='data/mapping/fault_group_mapping_valid.json'
     base_name = os.path.splitext(os.path.basename(file_path))[0]
     
     with open(mapping_path, 'r') as f:

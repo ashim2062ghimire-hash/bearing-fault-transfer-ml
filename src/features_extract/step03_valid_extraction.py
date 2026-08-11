@@ -8,23 +8,32 @@ from utils.utils_features import normalize_dataset, feature_calc, label_dataset
 
 def preprocess_and_calc(file_path):
     mat_data = scipy.io.loadmat(file_path)
-    is_healthy = "H" in os.path.basename(file_path)
-    de_key = None
-    rpm = None
     base_name = os.path.basename(file_path)
-    for k in mat_data.keys():
-        if 'DE_time' in k:
-            de_key = k
-        if "RPM" in k:
-            rpm = float(mat_data[k].ravel()[0])
-    if rpm is None or rpm == 0:
-        if "_600" in base_name:
-            rpm = 600.0
-        elif "_900" in base_name:
-            rpm = 900.0
-        elif "_1200" in base_name:
-            rpm = 1200.0
-    signal = mat_data[de_key].flatten()
+
+    best_key = None
+    max_length = 0
+
+    for key, val in mat_data.items():
+        if key.startswith("__"):
+            continue
+
+        if isinstance(val, np.ndarray):
+            size = val.size
+            if size > max_length:
+                max_length = size
+                best_key = key
+
+    if best_key is None:
+        raise KeyError(f"Could not find any signal array inside '{file_path}'")
+
+    signal = mat_data[best_key].flatten()
+
+    if "_600" in base_name:
+        rpm = 600.0
+    elif "_900" in base_name:
+        rpm = 900.0
+    elif "_1200" in base_name:
+        rpm = 1200.0
 
     native_fs = 51200
 
@@ -44,13 +53,13 @@ def valid_main():
     x = ["MFS","self_built"]
     output_dir='data/processed'
     for i in x:
-        input_dir = glob.glob(os.path.join(f'data/raw/{i}', "*"))
+        input_dir = glob.glob(os.path.join(f"data/raw/{i}", "*"))
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir,f"{i}_features_comp.csv")
         all_rows = []
         for file_path in input_dir:
             features = preprocess_and_calc(file_path)
-            labels = label_dataset(file_path)
+            labels = label_dataset(file_path, prefix = i)
             for feature_row in features:
                 row = np.hstack((feature_row, labels))
                 all_rows.append(row)
@@ -62,7 +71,7 @@ def valid_main():
             ]
 
             df.to_csv(output_path, index=False, header=feature_headers)
-        normalize_dataset(prefix=f'{i}')
+        normalize_dataset(prefix = i)
 
 if __name__ == "__main__":
     valid_main()

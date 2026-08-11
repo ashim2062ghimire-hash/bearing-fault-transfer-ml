@@ -38,7 +38,7 @@ def train_and_evaluate_simulation(output_dir, model_dir):
     model.fit(X_cwru, y_cwru)
     
     feature_names = ["RMS", "Kurtosis", "Peak_Amplitude", "Standard_Deviation", "Dominant_Frequency", "Peak_FFT_Amplitude", 
-                     "BPFO_Amplitude", "BPFI_Amplitude", "BSF_Amplitude", "BPFO_Ratio", "BPFI_Ratio", "BSF_Ratio"]
+                     "BPFO_Amplitude", "BPFI_Amplitude", "BPFO_Ratio", "BPFI_Ratio"]
     importances = model.feature_importances_
     df_imp = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
     print(df_imp.sort_values(by='Importance', ascending=False).to_string(index=False))
