@@ -15,13 +15,13 @@ FEATURE_NAMES = [
 
 CLASS_NAMES, class_labels = load_class_mapping()
 
-def beeswarm_plots(model, X_data, domain_name, output_dir, target_class_idx=6):
+def beeswarm_plots(model, X_data, domain_name, output_dir):
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_data)
     X_df = pd.DataFrame(X_data, columns=FEATURE_NAMES)
     os.makedirs(output_dir, exist_ok=True)
 
-    for idx, class_name in enumerate(CLASS_NAMES):
+    for idx, class_name in enumerate(class_labels):
         plt.figure(figsize=(10, 6))
 
         target_shap = shap_values[:, :, idx] 

@@ -15,9 +15,10 @@ def train_and_evaluate_simulation(output_dir, model_dir):
 
     model = RandomForestClassifier(
         n_estimators=300, 
-        max_depth=100, 
+        max_depth=12, 
         min_samples_split=7, 
-        max_features=5,
+        min_samples_leaf=4,
+        max_features='sqrt',
         random_state=9, 
         n_jobs=-1
     )
