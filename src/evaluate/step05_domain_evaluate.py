@@ -16,7 +16,7 @@ def evaluate_pipeline(output_dir, model_dir):
     target_domains = ["MFS", "self_built"]
     print("Loading datasets, random forest classification model, and class maps...")
     for domain in target_domains:
-        X_target, y_target, groups_target= load_X_y_groups(prefix = target_domains)
+        X_target, y_target, groups_target= load_X_y_groups(prefix = domain)
         y_pred = model.predict(X_target)
 
         cm_f1(

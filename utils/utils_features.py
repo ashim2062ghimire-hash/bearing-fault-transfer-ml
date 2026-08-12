@@ -59,15 +59,17 @@ def normalize_dataset(prefix):
     df = pd.read_csv(input_csv)
     
     feature_cols = df.select_dtypes(include=[np.number]).columns[:-2]
-    if prefix=="cwru":
-        scaler = MinMaxScaler()
-        df[feature_cols] = scaler.fit_transform(df[feature_cols])
-        joblib.dump(scaler, scaler_path)
-    else:
-        if not os.path.exists(scaler_path):
-            raise FileNotFoundError(f"Scaler file '{scaler_path}' not found! Process 'cwru' first.")
-        scaler = joblib.load(scaler_path)
-        df[feature_cols] = scaler.transform(df[feature_cols])
+    scaler = MinMaxScaler()
+    df[feature_cols] = scaler.fit_transform(df[feature_cols])
+    # if prefix=="cwru":
+    #     scaler = MinMaxScaler()
+    #     df[feature_cols] = scaler.fit_transform(df[feature_cols])
+    #     joblib.dump(scaler, scaler_path)
+    # else:
+    #     if not os.path.exists(scaler_path):
+    #         raise FileNotFoundError(f"Scaler file '{scaler_path}' not found! Process 'cwru' first.")
+    #     scaler = joblib.load(scaler_path)
+    #     df[feature_cols] = scaler.transform(df[feature_cols])
     df.to_csv(output_csv, index=False, header=False)
     print(f" -> Successfully saved normalized {prefix} dataset.")
 

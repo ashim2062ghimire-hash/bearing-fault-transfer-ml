@@ -9,22 +9,16 @@ from sklearn.manifold import TSNE
 from utils.utils_ml_evaluate import load_class_mapping, load_X_y_groups
 
 FEATURE_NAMES = [
-    "RMS", 
-    "Kurtosis", 
-    "Peak_Amplitude", 
-    "Standard_Deviation",
-    "Dominant_Frequency", 
-    "Peak_FFT_Amplitude", 
-    "BPFO_Ratio", 
-    "BPFI_Ratio"
-]
+            "RMS", "Kurtosis", "Peak_Amplitude", "Standard_Deviation", "Dominant_Frequency", "Peak_FFT_Amplitude", "BPFO_Amplitude", 
+            "BPFI_Amplitude", "BPFO_Ratio", "BPFI_Ratio"
+        ]
 
 CLASS_NAMES, class_labels = load_class_mapping()
 
 def beeswarm_plots(model, X_data, domain_name, output_dir, target_class_idx=6):
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(X_data)
-    
+    X_df = pd.DataFrame(X_data, columns=FEATURE_NAMES)
     os.makedirs(output_dir, exist_ok=True)
 
     for idx, class_name in enumerate(CLASS_NAMES):
@@ -34,7 +28,7 @@ def beeswarm_plots(model, X_data, domain_name, output_dir, target_class_idx=6):
 
         shap.summary_plot(
             target_shap, 
-            X_data, 
+            X_df, 
             feature_names=FEATURE_NAMES,
             plot_type="dot", 
             show=False
@@ -43,7 +37,7 @@ def beeswarm_plots(model, X_data, domain_name, output_dir, target_class_idx=6):
         plt.title(f"{domain_name.upper()} - Directional Beeswarm ({class_name})", fontsize=14, fontweight="bold", pad=15)
         plt.tight_layout()
         
-        plot_path = os.path.join(output_dir, f"{domain_name}_beeswarm_{class_name}.png")
+        plot_path = os.path.join(output_dir, f"beeswarm/{domain_name}_beeswarm_{class_name}.png")
         plt.savefig(plot_path, dpi=300)
         plt.close()
     print(f"--> Saved SINGLE Beeswarm plot for {domain_name}.")
@@ -90,16 +84,15 @@ def plot_tsne_cluster_overlap(output_dir, domain):
     plt.grid(True, linestyle='--', alpha=0.3)
     plt.tight_layout()
     
-    tsne_path = os.path.join(output_dir, f"{domain}_tsne_plot.png")
+    tsne_path = os.path.join(output_dir, f"t-SNE/{domain}_tsne_plot.png")
     plt.savefig(tsne_path, dpi=300, bbox_inches='tight')
-    plt.close()
+    print(f"--> Saved t-SNE plot for {domain}.")
 
-
-def main():
-    output_dir = "results"
+def plot_main():
+    output_dir = "output"
     os.makedirs(output_dir, exist_ok=True)
 
-    model = joblib.load("models/rf_cwru_model.pkl")
+    model = joblib.load("model/random_forest_model.joblib")
 
     domains = ["MFS", "self_built"]
     domains_data = {}
@@ -109,8 +102,8 @@ def main():
 
         beeswarm_plots(model, X, domain, output_dir)
 
-        plot_tsne_cluster_overlap(domains_data, output_dir, domain)
+        plot_tsne_cluster_overlap(output_dir, domain)
 
 
 if __name__ == "__main__":
-    main()
+    plot_main()

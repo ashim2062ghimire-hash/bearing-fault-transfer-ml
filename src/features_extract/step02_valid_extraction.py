@@ -50,6 +50,7 @@ def preprocess_and_calc(file_path):
     return features
  
 def valid_main():
+    print("|| STARTING TARGET DOMAIN FILE EXTRACTION ||")
     x = ["MFS","self_built"]
     output_dir='data/processed'
     for i in x:

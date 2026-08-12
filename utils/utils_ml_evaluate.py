@@ -34,8 +34,8 @@ def load_X_y_groups(prefix):
 def cm_f1(y_true, y_pred, output_dir, prefix, unique_classes, display_labels):
     f1 = f1_score(y_true, y_pred, average='macro')
     os.makedirs(output_dir, exist_ok=True)
-    np.save(os.path.join(output_dir, f"{prefix}_f1.npy"), f1)
-    print(f"-> Successfully saved f1-score to 'output/{prefix}_f1.npy'")
+    np.save(os.path.join(output_dir, f"F1/{prefix}_f1.npy"), f1)
+    print(f"-> Successfully saved f1-score to 'output/F1/{prefix}_f1.npy'")
         
     print("Generating visual Confusion Matrix plot...")
     conf_matrix = confusion_matrix(y_true, y_pred, labels=unique_classes, normalize='true')
@@ -46,9 +46,9 @@ def cm_f1(y_true, y_pred, output_dir, prefix, unique_classes, display_labels):
     plt.xlabel("Predicted Class", fontsize=12, labelpad=10)
     plt.ylabel("Actual Class", fontsize=12, labelpad=10)
     plt.tight_layout()
-    plt.savefig(f'output/{prefix}_confusion_matrix.png', dpi=300)
+    plt.savefig(f'output/CM/{prefix}_confusion_matrix.png', dpi=300)
     plt.close()
-    print(f"-> Successfully saved CM plot to 'output/{prefix}_confusion_matrix.png'")
+    print(f"-> Successfully saved CM plot to 'output/CM/{prefix}_confusion_matrix.png'")
 
 def collapse_to_3class(y_7class):
     mapping = {0: 0, 1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2}

@@ -16,7 +16,7 @@ def compute_feature_shift(source_X, target_X, feature_names):
         shifts[name] = round(distance, 4)
     return shifts
 
-def main():
+def shift_main():
     output_dir = "results"
     os.makedirs(output_dir, exist_ok=True)
 
@@ -39,4 +39,4 @@ def main():
         print(f"--> Saved feature shift ranking for {domain} to '{output_csv}'")
 
 if __name__ == "__main__":
-    main()
+    shift_main()

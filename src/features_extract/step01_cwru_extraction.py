@@ -49,6 +49,7 @@ def preprocess_and_calc(file_path):
     return features
  
 def cwru_main():
+    print("|| STARTING CWRU FILE EXTRACTION ||")
     output_dir='data/processed'
     input_dir = glob.glob(os.path.join('data/raw/cwru', "*"))
     os.makedirs(output_dir, exist_ok=True)
