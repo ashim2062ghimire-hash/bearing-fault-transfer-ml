@@ -32,11 +32,11 @@ def load_X_y_groups(prefix):
     return X, y, groups
 
 def cm_f1(y_true, y_pred, output_dir, prefix, unique_classes, display_labels):
-    f1 = f1_score(y_true, y_pred, average=None)
+    f1 = f1_score(y_true, y_pred, average='macro')
     os.makedirs(output_dir, exist_ok=True)
     np.save(os.path.join(output_dir, f"{prefix}_f1.npy"), f1)
     print(f"-> Successfully saved f1-score to 'output/{prefix}_f1.npy'")
-    
+        
     print("Generating visual Confusion Matrix plot...")
     conf_matrix = confusion_matrix(y_true, y_pred, labels=unique_classes, normalize='true')
     disp_cm = ConfusionMatrixDisplay(confusion_matrix=conf_matrix, display_labels=display_labels)
@@ -49,3 +49,20 @@ def cm_f1(y_true, y_pred, output_dir, prefix, unique_classes, display_labels):
     plt.savefig(f'output/{prefix}_confusion_matrix.png', dpi=300)
     plt.close()
     print(f"-> Successfully saved CM plot to 'output/{prefix}_confusion_matrix.png'")
+
+def collapse_to_3class(y_7class):
+    mapping = {0: 0, 1: 1, 2: 1, 3: 1, 4: 2, 5: 2, 6: 2}
+    return np.array([mapping[val] for val in y_7class])
+
+def compute_error_breakdown(y_true, y_pred):
+    y_true_3c = collapse_to_3class(y_true)
+    y_pred_3c = collapse_to_3class(y_pred)
+    total = len(y_true)
+    
+    loc_errors = np.sum(y_true_3c != y_pred_3c)
+    sev_errors = np.sum((y_true_3c == y_pred_3c) & (y_true != y_pred))
+    
+    return {
+        "Location Error Rate (%)": round((loc_errors / total) * 100, 2),
+        "Severity Error Rate (%)": round((sev_errors / total) * 100, 2)
+    }

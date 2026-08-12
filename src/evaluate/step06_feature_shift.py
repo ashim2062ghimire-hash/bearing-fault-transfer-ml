@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
-from utils.utils_ml import load_class_mapping, load_X_y_groups
+from utils.utils_ml_evaluate import load_class_mapping, load_X_y_groups
 import openpyxl
 from openpyxl.styles import Font
 

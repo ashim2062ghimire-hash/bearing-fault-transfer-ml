@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedGroupKFold, cross_val_predict
-from utils.utils_ml import load_X_y_groups, load_class_mapping, cm_f1
+from utils.utils_ml_evaluate import load_X_y_groups, load_class_mapping, cm_f1
 
 def train_and_evaluate_simulation(output_dir, model_dir):
     print("\n--- [Starting RF Training with CWRU dataset] ---")

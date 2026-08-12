@@ -1,8 +1,8 @@
-from features_extract.step02_cwru_extraction import cwru_main
-from src.ml.step04_preprocessing import preprocess_pipeline
-from src.ml.step05_training_and_evaluation import train_and_evaluate_simulation
-from ml.step06_evaluate import evaluate_ansys_pipeline
-from src.ml.step07_domain_comparision import run_domain_comparison
+from features_extract.step01_cwru_extraction import cwru_main
+from ml.step03_preprocessing import preprocess_pipeline
+from ml.step04_training_and_evaluation import train_and_evaluate_simulation
+from evaluate.step05_domain_evaluate import evaluate_pipeline
+from evaluate.step06_feature_shift import run_domain_comparison
 
 def main():
      print("|| STARTING CWRU FILE EXTRACTION ||")
@@ -19,7 +19,7 @@ def main():
           output_dir="output", 
           model_dir="model"
      )
-     evaluate_ansys_pipeline(
+     evaluate_pipeline(
           model_dir="model/random_forest_model.joblib", 
           output_dir="output"
      )
