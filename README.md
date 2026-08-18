@@ -1,191 +1,213 @@
-# SIMULATION-BASED PREDICTIVE MAINTENANCE FOR BEARING FAULT DIAGNOSIS USING FINITE ELEMENT ANALYSIS AND RANDOM FOREST CLASSIFIER
+# Bearing Fault Diagnosis: Cross-Domain Transfer & SHAP Interpretability
 
-## Overview
+## 1. Overview
 
-This repository contains the core software implementation, machine learning pipeline, and data validation scripts for the project.
+This project investigates why machine learning models trained on a single benchmark
+bearing-vibration dataset (CWRU) fail to generalize to vibration data collected on a
+different physical test rig (MFS), and tests whether a single, interpretable
+preprocessing change — unit-variance normalization — can close that gap. A Random
+Forest classifier is trained exclusively on CWRU Drive End data and evaluated in a
+strict **zero-shot** setting on the MFS dataset, under two otherwise identical
+pipelines that differ only in the presence of a segment-level unit-variance
+normalization step. SHAP (SHapley Additive exPlanations) is used to explain *why*
+accuracy changes, not just *that* it changes, by comparing feature attributions
+before and after normalization.
 
-The system leverages data from **Finite Element Analysis (FEA)** simulations alongside physical experimental data (**CWRU Bearing Dataset**) to build a robust **Random Forest Classifier** capable of identifying and diagnosing structural bearing faults.
+**Core finding:** enforcing domain-consistent normalization raised mean three-class
+(Healthy / Inner Race / Outer Race) transfer accuracy from **57.7% to 92.3%**.
+SHAP analysis shows this is driven by scale-sensitive amplitude features (RMS,
+Standard Deviation, Peak Amplitude) losing nearly all predictive contribution, while
+scale-invariant, geometry-derived ratio features (BPFO-ratio, BPFI-ratio) become the
+dominant contributors to Inner Race and Outer Race classification.
 
-This README documents the __completed__ CWRU + ML components. The ANSYS simulation branch (`src/features_extract/step_01_noise_inject.py` and `src/features_extract/step02_ansys_extraction.py`) is a stub and is not yet implemented — it is tracked as future work, not part of this document.
-
----
-
-## Project Structure
-
-```text
-minor.py/
-├── README.md
-├── .gitignore
-├── data/
-│   ├── mapping/
-│   │   ├── class_mapping.json
-│   │   └── fault_group_mapping.json
-├── main.py
-├── output/
-│   ├── ansys_confusion_matrix.png
-│   ├── ansys_f1.npy
-│   ├── ansys_roc_auc_curve.png
-│   ├── cwru_confusion_matrix.png
-│   ├── cwru_f1.npy
-│   ├── domain_tsne_plot.png
-│   ├── f1_comparison_table.md
-│   └── f1_comparison_table.xlsx
-├── requirements.txt
-├── setup_project.sh
-├── src/
-│   ├── features_extract/
-│   │   ├── step01_noise_inject.py
-│   │   ├── step02_ansys_extraction.py
-│   │   ├── step03_cwru_extraction.py
-│   └── ml/
-│       ├── step04_preprocessing.py
-│       ├── step05_training_and_evaluation.py
-│       ├── step06_evaluate_ansys.py
-│       └── step07_domain_comparision.py
-└── utils/
-    ├── utils_features.py
-    └── utils_ml.py
-```
-
-> `data/raw`, `data/processed`, `data/splits`, and `model/` are generated at runtime and are gitignored — not shown above.
-
-## Dataset & File Naming
-
-__Source:__ CWRU Bearing Data Center, renamed per `data/mapping/fault_group_mapping.json`.
-
-Raw `.mat` filenames follow `<FAMILY><DEFECT_SIZE>_<HP_INDEX>.mat`, mapped to the 10-class scheme as follows:
-
-| Filename prefix | Fault Class | Class ID |
-|---|---|---|
-| `H_*` | Healthy | 0 |
-| `IR007_*` | IR Minor | 1 |
-| `IR014_*` | IR Moderate | 2 |
-| `IR021_*` | IR Severe | 3 |
-| `OR007_*` | OR Minor | 4 |
-| `OR014_*` | OR Moderate | 5 |
-| `OR021_*` | OR Severe | 6 |
-| `B007_*` | Ball Minor | 7 |
-| `B014_*` | Ball Moderate | 8 |
-| `B021_*` | Ball Severe | 9 |
-
-The `_0/_1/_2/_3` suffix denotes motor load (0–3 HP, RPM ≈ 1797/1772/1750/1730 respectively), used as the `hp_group` for `StratifiedGroupKFold`.
-
-**Bearing type:** SKF 6205-2RS JEM
+Full methodology, results, and discussion are in [`Final_report.pdf`](./Final_report.pdf).
 
 ---
 
-## Signal Processing Pipeline (`step03_cwru_extraction.py`)
+## 2. System & Workspace Environment
 
-1. **Drift removal:** 10 Hz highpass Butterworth (order 4), `sosfiltfilt`, applied to the full raw signal.
-2. __Sample-rate alignment:__ Healthy signals are natively sampled at 48 kHz vs. 12 kHz for faulty signals — healthy signals are downsampled via `resample_poly` (up=1, down=4) to match 12 kHz across all classes.
-3. **Fault-band highpass:** 1000 Hz highpass Butterworth (order 4), applied to the full aligned signal before segmentation (avoids edge artifacts from windowed filtering).
-4. **Segmentation:** 2000-sample windows, 50% overlap.
+This pipeline was developed and run inside a dedicated Python virtual environment
+to keep dependencies isolated and reproducible.
 
-### Envelope / characteristic-frequency features
+### Workspace Specifications
 
-Per segment, the Hilbert envelope is computed and its FFT is searched near BPFO, BPFI, and BSF (and their 2×/3× harmonics) within a **±5 Hz tolerance**, summing matched peaks.
+- **Python Runtime:** 3.12.x (`./venv/bin/python3`)
+- **Package Installer:** `./venv/bin/python3 -m pip`
 
----
+### Project Dependencies
 
-## Feature Set (12 features per segment)
-
-| # | Feature | Description |
-|---|---|---|
-| 1 | RMS | Root mean square amplitude |
-| 2 | Kurtosis | Signal impulsiveness (Fisher) |
-| 3 | Peak Amplitude | Max absolute amplitude |
-| 4 | Standard Deviation | — |
-| 5 | Dominant Frequency | Frequency bin of max FFT magnitude |
-| 6 | Peak FFT Amplitude | Magnitude at dominant frequency |
-| 7 | BPFO Amplitude | Sum of Envelope-FFT energy near 3 Harmonics of outer-race fault frequency |
-| 8 | BPFI Amplitude | Sum of Envelope-FFT energy near 3 Harmonics of inner-race fault frequency |
-| 9 | BSF Amplitude | Sum of Envelope-FFT energy near 3 Harmonics of ball-spin frequency |
-| 10 | BPFO Ratio | BPFO amp / (BPFO+BPFI+BSF amp) |
-| 11 | BPFI Ratio | BPFI amp / (BPFO+BPFI+BSF amp) |
-| 12 | BSF Ratio | BSF amp / (BPFO+BPFI+BSF amp) |
-
-The BPFO, BPFI, and BSF amplitudes are calculated by summing the peak spectral energies found across their fundamental frequencies and first two harmonics (1x, 2x and 3x the target frequency).
-The three ratio features disentangle **fault family** (IR/OR/Ball) from raw signal energy; the combined denominator (sum of all three characteristic amplitudes) acts as an implicit gatekeeper — near-zero for a healthy bearing, preventing noisy ratios from driving false fault predictions.
-
-All features are Min-Max normalized (`normalize_dataset`) prior to model training.
+- **numpy** — signal array handling and feature matrix construction
+- **pandas** — tabular feature CSVs and results summarization
+- **scipy** — `sosfiltfilt` zero-phase high-pass filtering and Hilbert transform (envelope extraction)
+- **scikit-learn** — `RandomForestClassifier`, `StratifiedGroupKFold` / group k-fold splitting, `MinMaxScaler`
+- **shap** — TreeExplainer-based SHAP value computation and beeswarm plotting
+- **matplotlib** — confusion matrices, SHAP beeswarm plots
+- **joblib** — serializing trained model artifacts to disk
 
 ---
 
-## Data Preprocessing (`step04_preprocessing.py`)
+## 3. Pipeline Architecture & Execution Flow
 
-Takes the normalized feature CSVs produced by feature extraction (`cwru_features_norm.csv` and `ansys_features_norm.csv` — normalization itself happens upstream, at the end of `step03_cwru_extraction.py`) and prepares them for model training:
+The pipeline runs as a sequential set of stages from raw signal acquisition through
+to paired SHAP interpretation, executed through a single entry point.
 
-- Loads both the CWRU and ANSYS feature CSVs, raising an explicit error if either is missing rather than failing silently downstream.
-- Splits each dataset into three aligned arrays: `X` (all feature columns), `groups` (second-to-last column — the HP load group, used for `StratifiedGroupKFold` splitting), and `y` (final column — the fault class label).
-- Persists each array to disk as `.npy` files (`X_cwru.npy`, `groups_cwru.npy`, `y_cwru.npy`, and the ANSYS equivalents) under `data/splits/`, decoupling preprocessing from training so the pipeline can be re-run without re-parsing CSVs each time.
+### Stage 1: Data Acquisition
 
-This stage performs no additional transformation of its own — normalization is already complete by the time features reach this step; its role is purely to isolate and persist properly shaped train/eval arrays for `step05_training_and_evaluation.py` to consume.
+- **Source domain (training only):** CWRU Drive End dataset — SKF 6205 bearing,
+  Healthy + EDM-seeded Inner/Outer Race faults at three fault diameters
+  (0.007″ / 0.014″ / 0.021″), ~1720–1797 RPM, 0–3 HP load, sampled at 48 kHz.
+- **Target domain (zero-shot evaluation only):** MFS (Machinery Fault Simulator)
+  dataset — matching SKF 6205 configuration, seven-class scheme (Normal, IR2/IR5/IR8,
+  OR2/OR5/OR8 by arc-degree severity), sampled at 51.2 kHz across three fixed speeds
+  (600 / 900 / 1200 RPM).
 
----
+No MFS data is used during training or hyperparameter selection at any point.
 
-## Model & Validation (`step05_training_and_evaluation.py`)
+### Stage 2: Signal Preprocessing (Two Parallel Pipelines)
 
-- __Classifier:__ `RandomForestClassifier` — `n_estimators=300`, `max_depth=100`, `min_samples_split=7`, `max_features=5`, `random_state=9`
-- __Cross-validation:__ `StratifiedGroupKFold`, folds = number of unique `hp_group` values, grouped by load condition (leave-one-HP-out style evaluation)
-- __Serialization:__ `joblib` → `model/random_forest_model.joblib`
+Both pipelines share zero-phase filtering (`sosfiltfilt`) applied to the full-length
+signal before segmentation, split into two branches: a 1000 Hz high-pass branch
+feeding time/frequency-domain features, and a Hilbert-transform envelope branch
+feeding fault-frequency ratio features. Signals are cut into 10,000-sample windows
+with 50% overlap.
 
-### Evaluation outputs
+- **Baseline pipeline:** features extracted directly from the filtered, segmented window.
+- **Normalized pipeline:** identical to baseline, plus one change — each window is
+  zero-centered and rescaled to unit standard deviation, computed separately per
+  domain, immediately before feature extraction.
 
-- Row-normalized confusion matrix (`output/cwru_confusion_matrix.png`)
-- Per-class F1 (`output/cwru_f1.npy`)
+This is the **only** variable that differs between the two pipelines — filtering,
+segmentation, feature-extraction code, model architecture, and hyperparameters are
+held identical, so any accuracy change is attributable to normalization alone.
 
----
+### Stage 3: Feature Extraction
 
-## CWRU Results
+Eight hand-crafted features per segment:
 
-Per-class F1-score (Stratified group K-fold Cross-Validation):
-
-| Fault Class | F1-Score |
+| Category | Features |
 |---|---|
-|Healthy              | 1.0000|
-|IR Minor             | 0.9979|
-|IR Moderate          | 0.9885|
-|IR Severe            | 1.0000|
-|OR Minor             | 0.9845|
-|OR Moderate          | 0.9384|
-|OR Severe            | 0.9071|
-|Ball Minor           | 1.0000|
-|Ball Moderate        | 0.9331|
-|Ball Severe          | 1.0000|
+| Time-domain (4) | RMS, Standard Deviation, Peak Amplitude, Kurtosis |
+| Frequency-domain (2) | Dominant Frequency, Peak FFT Amplitude |
+| Ratio (2) | BPFO-ratio, BPFI-ratio |
 
-**Pattern:** Healthy is perfectly separated; every *Moderate*-severity class (IR, OR, Ball) sits at the bottom of the ranking (~0.91), consistently lower than its corresponding Minor and Severe neighbors. This is physically consistent — Moderate severity sits at the transition boundary between Minor and Severe defect sizes, so it's most prone to spectral overlap with its immediate neighbors on either side.
+BPFO-ratio and BPFI-ratio are computed from the envelope spectrum as the proportion
+of summed amplitude across the first three harmonics of each fault frequency,
+recalculated per RPM condition from SKF 6205 geometry (see `Final_report.pdf`,
+Annex A, for the full geometric parameter table). The 8-feature set is then
+min-max scaled, fit independently per domain, identically in both pipelines.
 
-![CWRU Confusion Matrix](output/cwru_confusion_matrix.png)
+### Stage 4: Model Training (CWRU only)
+
+A single Random Forest configuration is used throughout:
+`n_estimators=300, max_depth=10, max_features=0.8, random_state=9`, trained with
+group k-fold cross-validation (leave-one-load-condition-out) on CWRU. Two models
+are trained — one on baseline features, one on normalized features — with identical
+hyperparameters and validation scheme, so model configuration is ruled out as an
+explanation for any performance difference.
+
+### Stage 5: Zero-Shot Cross-Domain Evaluation
+
+Each trained model is applied, without any fine-tuning or adaptation, directly to
+the correspondingly processed MFS features. Results are reported at two levels of
+granularity: a 3-class collapse (Healthy / Inner Race / Outer Race) for the
+headline accuracy comparison, and the full 7-class scheme (fault type × severity)
+for detailed error analysis.
+
+### Stage 6: SHAP Interpretability Analysis
+
+SHAP values are computed via `TreeExplainer` for true-positive predictions only,
+for both the baseline and normalized models, on both source and target domains.
+Beeswarm plots are generated per fault category (Healthy, Inner Race, Outer Race)
+so feature-attribution patterns can be directly compared before and after
+normalization.
 
 ---
 
-## Dependencies
+## 4. Results Summary
 
-See [`requirements.txt`](requirements.txt) for pinned versions. Install with:
+### Cross-Domain Accuracy (3-Class, MFS Target)
 
-```bash
-pip install -r requirements.txt
-```
+| Class | Before Normalization | After Normalization |
+|---|---|---|
+| Healthy | 1.00 | 1.00 |
+| Inner Race | 0.34 | 1.00 |
+| Outer Race | 0.39 | 0.77 |
+| **Average** | **57.7%** | **92.3%** |
+
+### SHAP Feature Importance Shift
+
+| Feature | Before Normalization | After Normalization |
+|---|---|---|
+| RMS | ~0.14 | ~0.0 |
+| Standard Deviation | ~0.12 | ~0.0 |
+| Peak Amplitude | ~0.35 | ~0.02 |
+| Kurtosis | ~0.05 | ~0.15 |
+| BPFO-ratio | ~0.03 | ~0.20 |
+| BPFI-ratio | ~0.03 | ~0.25 |
+
+**Interpretation:** normalization does not make the ratio features more informative
+in isolation — it removes the scale-driven shortcut (RMS / Std / Peak Amplitude)
+the model was previously exploiting, which forces the classifier onto features that
+carried genuine, physically-grounded fault information throughout. Fault *location*
+(Inner vs. Outer Race) transfers well after normalization; fault *severity* does
+not, since severity information is carried largely by the amplitude-scale features
+that normalization suppresses.
 
 ---
 
-## Usage
+## 5. Known Limitations
+
+- Severity labels are assumed equivalent between CWRU's EDM-seeded fault diameters
+  and MFS's arc-degree defects; this is not independently validated.
+- Only Random Forest was evaluated; it is not established whether the normalization
+  effect is specific to tree-based models.
+- CWRU (1730–1797 RPM) and MFS (600–1200 RPM) operate in largely disjoint speed
+  ranges, which limits the transferability of Hz-based features (Dominant Frequency)
+  independent of normalization.
+- Ball/Cage faults were excluded from cross-domain evaluation.
+- The BPFO-ratio/BPFI-ratio harmonic count (first 3 harmonics) was not subjected to
+  sensitivity analysis.
+
+Full discussion in `Final_report.pdf`, Section 1.6 and Chapter 5.
+
+---
+
+## 6. Execution Commands
 
 ```bash
+# Activate the isolated virtual environment
 source venv/bin/activate
+
+# Run the full pipeline: preprocessing -> training -> zero-shot eval -> SHAP
 python3 main.py
 ```
 
-Runs the full pipeline: CWRU extraction → preprocessing → training/evaluation → (ANSYS evaluation and domain comparison steps will currently fail/no-op until ANSYS extraction is implemented).
+---
+
+## 7. Repository Structure
+
+```
+.
+├── data/               # Dataset references / mapping configs
+├── src/                # Pipeline stage scripts (preprocessing, training, eval, SHAP)
+├── output/             # Generated confusion matrices, beeswarm plots, result tables
+├── model/              # Serialized trained Random Forest artifacts (.joblib)
+├── main.py             # Entry point — runs the full pipeline end to end
+├── requirements.txt
+└── README.md
+```
 
 ---
 
-## Status
+## 8. Citation / Acknowledgements
 
-| Component | Status |
-|---|---|
-| CWRU signal processing & feature extraction | Complete |
-| ML pipeline (Random Forest, GroupKFold CV) | Complete |
-| CWRU validation results | Complete |
-| ANSYS FEA feature extraction | Not completed |
-| Sim-to-real cross-domain evaluation | Pending ANSYS completion |
+Developed as a minor project for the Bachelor's degree in Mechanical Engineering,
+Department of Mechanical and Aerospace Engineering, Pulchowk Campus, Institute of
+Engineering, Tribhuvan University (2026), under the supervision of Asst. Prof.
+Manoj Adhikari.
+
+Vibration datasets courtesy of the Case Western Reserve University Bearing Data
+Center and the Sensing and Measurement Laboratory, School of Mechatronics
+Engineering, Harbin Institute of Technology.
+
+**Authors:** Ashim Ghimire, Gaurab Man Joshi, Pranjal Khadka, Sambid Koirala
