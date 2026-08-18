@@ -20,8 +20,6 @@ Standard Deviation, Peak Amplitude) losing nearly all predictive contribution, w
 scale-invariant, geometry-derived ratio features (BPFO-ratio, BPFI-ratio) become the
 dominant contributors to Inner Race and Outer Race classification.
 
-Full methodology, results, and discussion are in [`Final_report.pdf`](./Final_report.pdf).
-
 ---
 
 ## 2. System & Workspace Environment
@@ -210,4 +208,3 @@ Vibration datasets courtesy of the Case Western Reserve University Bearing Data
 Center and the Sensing and Measurement Laboratory, School of Mechatronics
 Engineering, Harbin Institute of Technology.
 
-**Authors:** Ashim Ghimire, Gaurab Man Joshi, Pranjal Khadka, Sambid Koirala
