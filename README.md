@@ -5,7 +5,7 @@
 This project investigates why machine learning models trained on a single benchmark
 bearing-vibration dataset (CWRU) fail to generalize to vibration data collected on a
 different physical test rig (MFS), and tests whether a single, interpretable
-preprocessing change — unit-variance normalization — can close that gap. A Random
+preprocessing change, i.e. unit-variance normalization, can close that gap. A Random
 Forest classifier is trained exclusively on CWRU Drive End data and evaluated in a
 strict **zero-shot** setting on the MFS dataset, under two otherwise identical
 pipelines that differ only in the presence of a segment-level unit-variance
@@ -70,11 +70,11 @@ feeding fault-frequency ratio features. Signals are cut into 10,000-sample windo
 with 50% overlap.
 
 - **Baseline pipeline:** features extracted directly from the filtered, segmented window.
-- **Normalized pipeline:** identical to baseline, plus one change — each window is
+- **Normalized pipeline:** identical to baseline, plus one change, each window is
   zero-centered and rescaled to unit standard deviation, computed separately per
   domain, immediately before feature extraction.
 
-This is the **only** variable that differs between the two pipelines — filtering,
+This is the **only** variable that differs between the two pipelines, filtering,
 segmentation, feature-extraction code, model architecture, and hyperparameters are
 held identical, so any accuracy change is attributable to normalization alone.
 
@@ -90,8 +90,7 @@ Eight hand-crafted features per segment:
 
 BPFO-ratio and BPFI-ratio are computed from the envelope spectrum as the proportion
 of summed amplitude across the first three harmonics of each fault frequency,
-recalculated per RPM condition from SKF 6205 geometry (see `Final_report.pdf`,
-Annex A, for the full geometric parameter table). The 8-feature set is then
+recalculated per RPM condition from SKF 6205 geometry. The 8-feature set is then
 min-max scaled, fit independently per domain, identically in both pipelines.
 
 ### Stage 4: Model Training (CWRU only)
@@ -144,7 +143,7 @@ normalization.
 | BPFI-ratio | ~0.03 | ~0.25 |
 
 **Interpretation:** normalization does not make the ratio features more informative
-in isolation — it removes the scale-driven shortcut (RMS / Std / Peak Amplitude)
+in isolation instead it removes the scale-driven shortcut (RMS / Std / Peak Amplitude)
 the model was previously exploiting, which forces the classifier onto features that
 carried genuine, physically-grounded fault information throughout. Fault *location*
 (Inner vs. Outer Race) transfers well after normalization; fault *severity* does
@@ -165,8 +164,6 @@ that normalization suppresses.
 - Ball/Cage faults were excluded from cross-domain evaluation.
 - The BPFO-ratio/BPFI-ratio harmonic count (first 3 harmonics) was not subjected to
   sensitivity analysis.
-
-Full discussion in `Final_report.pdf`, Section 1.6 and Chapter 5.
 
 ---
 
